@@ -15,6 +15,7 @@ from modin.engines.base.io.file_reader import FileReader
 import numpy as np
 import warnings
 import os
+import io
 
 
 class TextFileReader(FileReader):
@@ -59,6 +60,8 @@ class TextFileReader(FileReader):
         offset_size: int,
         quotechar: bytes = b'"',
         is_quoting: bool = True,
+        encoding: str = None,
+        newline: bytes = None,
     ):
         """
         Moves the file offset at the specified amount of bytes.
@@ -72,6 +75,10 @@ class TextFileReader(FileReader):
             Indicate quote in a file.
         is_quoting: bool, default True
             Whether or not to consider quotes.
+        encoding: str, optional
+            Encoding of `f`.
+        newline: bytes, optional
+            Byte or sequence of bytes indicating line endings.
 
         Returns
         -------
@@ -79,10 +86,11 @@ class TextFileReader(FileReader):
             If file pointer reached the end of the file, but did not find
             closing quote returns `False`. `True` in any other case.
         """
-
         if is_quoting:
             chunk = f.read(offset_size)
-            outside_quotes = not chunk.count(quotechar) % 2
+            outside_quotes = (
+                not (chunk.count(quotechar) - chunk.count(b"\\" + quotechar)) % 2
+            )
         else:
             f.seek(offset_size, os.SEEK_CUR)
             outside_quotes = True
@@ -97,6 +105,8 @@ class TextFileReader(FileReader):
             quotechar=quotechar,
             is_quoting=is_quoting,
             outside_quotes=outside_quotes,
+            encoding=encoding,
+            newline=newline,
         )
 
         return outside_quotes
@@ -110,6 +120,8 @@ class TextFileReader(FileReader):
         skiprows: int = None,
         quotechar: bytes = b'"',
         is_quoting: bool = True,
+        encoding: str = None,
+        newline: bytes = None,
     ):
         """
         Compute chunk sizes in bytes for every partition.
@@ -128,6 +140,10 @@ class TextFileReader(FileReader):
             Indicate quote in a file.
         is_quoting: bool, default True
             Whether or not to consider quotes.
+        encoding: str, optional
+            Encoding of `f`.
+        newline: bytes, optional
+            Byte or sequence of bytes indicating line endings.
 
         Returns
         -------
@@ -148,6 +164,8 @@ class TextFileReader(FileReader):
                 nrows=skiprows,
                 quotechar=quotechar,
                 is_quoting=is_quoting,
+                encoding=encoding,
+                newline=newline,
             )
 
         start = f.tell()
@@ -164,6 +182,8 @@ class TextFileReader(FileReader):
                     nrows=partition_size,
                     quotechar=quotechar,
                     is_quoting=is_quoting,
+                    encoding=encoding,
+                    newline=newline,
                 )
                 result.append((start, f.tell()))
                 start = f.tell()
@@ -180,6 +200,8 @@ class TextFileReader(FileReader):
                     offset_size=partition_size,
                     quotechar=quotechar,
                     is_quoting=is_quoting,
+                    encoding=encoding,
+                    newline=newline,
                 )
 
                 result.append((start, f.tell()))
@@ -199,6 +221,8 @@ class TextFileReader(FileReader):
         quotechar: bytes = b'"',
         is_quoting: bool = True,
         outside_quotes: bool = True,
+        encoding: str = None,
+        newline: bytes = None,
     ):
         """
         Move the file offset at the specified amount of rows.
@@ -214,12 +238,16 @@ class TextFileReader(FileReader):
             Whether or not to consider quotes.
         outside_quotes: bool, default True
             Whether the file pointer is within quotes or not at the time this function is called.
+        encoding: str, optional
+            Encoding of `f`.
+        newline: bytes, optional
+            Byte or sequence of bytes indicating line endings.
 
         Returns
         -------
         tuple of bool and int,
             bool: If file pointer reached the end of the file, but did not find
-                closing quote returns `False`. `True` in any other case.
+            closing quote returns `False`. `True` in any other case.
             int: Number of rows that was read.
         """
         if nrows is not None and nrows <= 0:
@@ -227,16 +255,71 @@ class TextFileReader(FileReader):
 
         rows_read = 0
 
-        for line in f:
-            if is_quoting and line.count(quotechar) % 2:
-                outside_quotes = not outside_quotes
-            if outside_quotes:
-                rows_read += 1
-                if rows_read >= nrows:
-                    break
+        if encoding not in ("unicode_escape", "utf16", "utf32"):
+            for line in f:
+                if (
+                    is_quoting
+                    and (line.count(quotechar) - line.count(b"\\" + quotechar)) % 2
+                ):
+                    outside_quotes = not outside_quotes
+                if outside_quotes:
+                    rows_read += 1
+                    if rows_read >= nrows:
+                        break
+        else:
+            buffer_size = io.DEFAULT_BUFFER_SIZE
+            chunk = f.read(buffer_size)
+            while chunk:
+                bytes_read = 0
+                # split remove newline bytes from line
+                lines = chunk.split(newline)
+                chunk_size = len(chunk)
+                if len(lines) != 1:
+                    for line in lines[:-1]:
+                        bytes_read += len(line) + len(newline)
+                        if (
+                            is_quoting
+                            and (line.count(quotechar) - line.count(b"\\" + quotechar))
+                            % 2
+                        ):
+                            outside_quotes = not outside_quotes
+                        if outside_quotes:
+                            rows_read += 1
+                            if rows_read >= nrows:
+                                f.seek(f.tell() + bytes_read - chunk_size)
+                                return outside_quotes, rows_read
+
+                chunk = f.read(buffer_size)
+                if lines[-1]:
+                    # last line can be read without newline bytes
+                    chunk = lines[-1] + chunk
 
         # case when EOF
         if not outside_quotes:
             rows_read += 1
 
         return outside_quotes, rows_read
+
+    @classmethod
+    def compute_newline(cls, fpath_or_buf, encoding):
+        newline = None
+        if encoding in ("unicode_escape", "utf16", "utf32"):
+            import codecs
+
+            with open(fpath_or_buf, "r", encoding=encoding, newline="") as str_f:
+                try:
+                    # trigger for computing f.newlines
+                    str_f.readline()
+                except UnicodeDecodeError as e:
+                    with open(fpath_or_buf, "rb") as f:
+                        buffer = f.read(8200)
+                    raise ValueError(buffer + b"\n\n" + e.args[0].encode("utf8"))
+                # in bytes
+                newline = str_f.newlines.encode(encoding)
+                if encoding == "utf16":
+                    if newline.startswith(codecs.BOM_UTF16):
+                        newline = newline[len(codecs.BOM_UTF16) :]
+                elif encoding == "utf32":
+                    if newline.startswith(codecs.BOM_UTF32):
+                        newline = newline[len(codecs.BOM_UTF32) :]
+        return newline

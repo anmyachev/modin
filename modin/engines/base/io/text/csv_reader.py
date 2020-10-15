@@ -155,6 +155,7 @@ class CSVReader(TextFileReader):
                 **partition_kwargs,
             }
 
+            newline = cls.compute_newline(filepath_or_buffer, encoding)
             splits = cls.partitioned_file(
                 f,
                 num_partitions=num_partitions,
@@ -162,6 +163,8 @@ class CSVReader(TextFileReader):
                 skiprows=skiprows,
                 quotechar=quotechar,
                 is_quoting=is_quoting,
+                encoding=encoding,
+                newline=newline,
             )
             for start, end in splits:
                 args.update({"start": start, "end": end})

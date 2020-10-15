@@ -178,7 +178,7 @@ def _make_csv_file(filenames):
         thousands_separator=None,
         decimal_separator=None,
         comment_col_char=None,
-        quoting=csv.QUOTE_MINIMAL,
+        quoting=None,
         quotechar='"',
         doublequote=True,
         escapechar=None,
@@ -1341,12 +1341,31 @@ def test_from_csv_skiprows_names(names, skiprows):
 
 
 @pytest.mark.parametrize(
-    "encoding", ["latin8", "ISO-8859-1", "latin1", "iso-8859-1", "cp1252", "utf8"]
+    "encoding",
+    [
+        "latin8",
+        "ISO-8859-1",
+        "latin1",
+        "iso-8859-1",
+        "cp1252",
+        "utf8",
+        "unicode_escape",
+        "raw_unicode_escape",
+        "utf16",
+        "utf32",
+    ],
 )
 def test_from_csv_encoding(make_csv_file, encoding):
     make_csv_file(encoding=encoding)
 
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, encoding=encoding)
+    if encoding == "unicode_escape":
+        from io import StringIO
+
+        with open(TEST_CSV_FILENAME, mode="rb") as f:
+            pandas_df = pandas.read_csv(StringIO(f.read().decode(encoding)))
+    else:
+        pandas_df = pandas.read_csv(TEST_CSV_FILENAME, encoding=encoding)
+
     modin_df = pd.read_csv(TEST_CSV_FILENAME, encoding=encoding)
 
     df_equals(modin_df, pandas_df)

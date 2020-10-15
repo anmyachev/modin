@@ -97,17 +97,30 @@ class PandasCSVParser(PandasParser):
         start = kwargs.pop("start", None)
         end = kwargs.pop("end", None)
         index_col = kwargs.get("index_col", None)
+        encoding = kwargs.get("encoding", None)
         if start is not None and end is not None:
             # pop "compression" from kwargs because bio is uncompressed
             bio = FileReader.file_open(fname, "rb", kwargs.pop("compression", "infer"))
-            if kwargs.get("encoding", None) is not None:
+            if encoding in ("unicode_escape", "utf16", "utf32"):
+                with open(fname, "r", encoding=encoding, newline="") as fio:
+                    header = b"" + fio.readline().encode(encoding)
+            elif encoding is not None:
                 header = b"" + bio.readline()
             else:
                 header = b""
             bio.seek(start)
             to_read = header + bio.read(end - start)
             bio.close()
-            pandas_df = pandas.read_csv(BytesIO(to_read), **kwargs)
+
+            if encoding == "unicode_escape":
+                # workaround for pandas bug
+                # CI wailed when rows_size >= 2*10^5
+                from io import StringIO
+
+                storage = StringIO(to_read.decode(encoding))
+            else:
+                storage = BytesIO(to_read)
+            pandas_df = pandas.read_csv(storage, **kwargs)
         else:
             # This only happens when we are reading with only one worker (Default)
             return pandas.read_csv(fname, **kwargs)
