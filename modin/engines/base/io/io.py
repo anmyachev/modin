@@ -17,19 +17,17 @@ Module houses `BaseIO` class.
 `BaseIO` is base class for IO classes, that stores IO functions.
 """
 
-import pandas
-from pandas.util._decorators import doc
+import pickle
 from collections import OrderedDict
+from typing import Any, Optional
+
+import pandas
+from pandas._typing import CompressionOptions, FilePathOrBuffer, StorageOptions
+from pandas.util._decorators import doc
+
 from modin.error_message import ErrorMessage
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.utils import _inherit_docstrings
-from typing import Optional
-from pandas._typing import CompressionOptions, FilePathOrBuffer, StorageOptions
-from collections import OrderedDict
-from modin.error_message import ErrorMessage
-from modin.backends.base.query_compiler import BaseQueryCompiler
-from typing import Any, Optional
-import pickle
 
 _doc_default_io_method = """
 {summary} using pandas.
@@ -818,7 +816,6 @@ class BaseIO(object):
             protocol=protocol,
             storage_options=storage_options,
         )
-
 
     @classmethod
     @_inherit_docstrings(pandas.DataFrame.to_csv, apilink="pandas.DataFrame.to_csv")
