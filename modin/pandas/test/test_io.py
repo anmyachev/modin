@@ -1049,7 +1049,8 @@ class TestCsv:
         read_df = pd.read_csv(path, index_col=0)
         assert get_internal_df(read_df).index.name is None
         read_df = pd.read_csv(path, index_col=[0, 1])
-        assert get_internal_df(read_df).index.names == [None, "a"]
+        for name1, name2 in zip(get_internal_df(read_df).index.names, [None, "a"]):
+            assert name1 == name2
 
 
 class TestTable:

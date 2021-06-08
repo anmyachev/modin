@@ -94,7 +94,7 @@ class CSVDispatcher(TextFileDispatcher):
 
         # Now we need to define parameters, which are common for all partitions. These
         # parameters can be `sniffed` from empty dataframes created further
-        if index_col is None and not kwargs.get("usecols", None):
+        if names is not None and index_col is None and not kwargs.get("usecols", None):
             # When names is set to some list that is smaller than the number of columns
             # in the file, the first columns are built as a hierarchical index.
             empty_pd_df = pandas.read_csv(
