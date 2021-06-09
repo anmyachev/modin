@@ -214,7 +214,10 @@ class PandasCSVParser(PandasParser):
 
         index_names = kwargs.pop("index_names")
         column_names = kwargs.pop("column_names")
-        index_name_counts = len(index_names) if isinstance(index_names, list) else 1
+
+        index_name_counts = 0
+        if index_col is not None:
+            index_name_counts = len(index_names) if isinstance(index_names, list) else 1
         kwargs["names"] = [
             f"col{x}" for x in range(index_name_counts + len(column_names))
         ]
