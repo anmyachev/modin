@@ -452,6 +452,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
       - run: python -m pytest modin/pandas/test/test_io.py
+      - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
       - run: pip install dfsql && pytest modin/experimental/sql/test/test_sql.py
       - run: |
           curl -o codecov https://codecov.io/bash
@@ -494,8 +495,6 @@ jobs:
         run: python -m pytest -n 2 modin/pandas/test/test_series.py
       - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_io.py
-      - shell: bash -l {0}
-        run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
       - shell: bash -l {0}
         run: |
           curl -o codecov https://codecov.io/bash
