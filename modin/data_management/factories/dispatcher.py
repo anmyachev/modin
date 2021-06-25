@@ -184,6 +184,13 @@ class FactoryDispatcher(object):
         return cls.__factory._read_pickle_distributed(**kwargs)
 
     @classmethod
+    @_inherit_docstrings(
+        factories.ExperimentalPandasOnRayFactory._to_pickle_distributed
+    )
+    def to_pickle_distributed(cls, **kwargs):
+        return cls.__factory._to_pickle_distributed(**kwargs)
+
+    @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_json)
     def read_json(cls, **kwargs):
         return cls.__factory._read_json(**kwargs)
