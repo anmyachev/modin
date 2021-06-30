@@ -501,13 +501,18 @@ class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory
         return cls.io_cls.read_pickle_distributed(**kwargs)
 
     @classmethod
-    @doc(
-        _doc_io_method_raw_template,
-        source="Pickle files",
-        params=_doc_io_method_kwargs_params,
-    )
-    def _to_pickle_distributed(cls, **kwargs):
-        return cls.io_cls.to_pickle_distributed(**kwargs)
+    def _to_pickle_distributed(cls, *args, **kwargs):
+        """
+        Distributed pickle query compiler object.
+
+        Parameters
+        ----------
+        *args : args
+            Arguments to the writer method.
+        **kwargs : kwargs
+            Arguments to the writer method.
+        """
+        return cls.io_cls.to_pickle_distributed(*args, **kwargs)
 
 
 @doc(_doc_factory_class, backend_name="experimental PandasOnPython")
