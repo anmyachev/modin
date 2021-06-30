@@ -26,3 +26,5 @@ export MODIN_MEMORY=128000000000
 MODIN_BACKEND=omnisci MODIN_EXPERIMENTAL=true asv run HASHFILE:hashfile.txt \
     --show-stderr --launch-method=forkserver \
     --config asv.conf.omnisci.json -b ^omnisci -a repeat=3 -v
+
+cp -r .asv/results /bench_results

@@ -47,12 +47,13 @@ RUN conda update -n base -c defaults conda -y \
  && conda create -n modin --yes --no-default-packages \
  && conda activate modin \
  && conda install -c conda-forge python==3.8 pip \
- && pip install git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
+ && pip install git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9 \
  && conda clean --all --yes
 
 RUN git clone https://github.com/modin-project/modin.git
 
 COPY asv_runner.sh "${HOME}/asv_runner.sh"
+RUN mkdir /bench_results
 RUN echo 'conda activate modin && asv_runner.sh $*' > /entrypoint.sh
 
 ENTRYPOINT ["/bin/bash", "--login", "/entrypoint.sh"]
