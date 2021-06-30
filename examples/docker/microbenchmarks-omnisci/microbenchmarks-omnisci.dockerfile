@@ -46,7 +46,7 @@ RUN conda update -n base -c defaults conda -y \
  && conda config --set channel_priority strict \
  && conda create -n modin --yes --no-default-packages \
  && conda activate modin \
- && conda install -c conda-forge python==3.8 pip \
+ && conda install -c conda-forge -c default python==3.8 pip git \
  && pip install git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9 \
  && conda clean --all --yes
 
