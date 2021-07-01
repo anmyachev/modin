@@ -16,13 +16,7 @@ import numpy as np
 import pandas
 from pandas.errors import ParserWarning
 from collections import OrderedDict
-from modin.config import (
-    TestDatasetSize,
-    Engine,
-    Backend,
-    IsExperimental,
-    NPartitions,
-)
+from modin.config import TestDatasetSize, Engine, Backend, IsExperimental
 from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
 import pyarrow as pa
@@ -54,6 +48,7 @@ if Backend.get() == "Pandas":
     import modin.pandas as pd
 else:
     import modin.experimental.pandas as pd
+from modin.config import NPartitions
 
 NPartitions.put(4)
 
