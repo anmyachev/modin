@@ -176,6 +176,7 @@ class PandasParser(ClassLogger):
             **(kwargs.pop("storage_options", None) or {}),
         ) as bio:
             header = b""
+            from modin.core.io.text.utils import CustomNewlineIterator
             # In this case we beware that first line can contain BOM, so
             # adding this line to the `header` for reading and then skip it
             if encoding and (
@@ -186,22 +187,33 @@ class PandasParser(ClassLogger):
             ):
                 # do not 'close' the wrapper - underlying buffer is managed by `bio` handle
                 fio = TextIOWrapper(bio, encoding=encoding, newline="")
+                if kwargs["lineterminator"] not in ["\n", "\r", "\r\n"]:
+                    fio = CustomNewlineIterator(fio, kwargs["lineterminator"])
                 if header_size == 0:
                     header = fio.readline().encode(encoding)
                     kwargs["skiprows"] = 1
                 for _ in range(header_size):
                     header += fio.readline().encode(encoding)
             elif encoding is not None:
+                if kwargs["lineterminator"] not in ["\n", "\r", "\r\n"]:
+                    print("HERE")
+                    bio = CustomNewlineIterator(bio, kwargs["lineterminator"].encode(encoding))
                 if header_size == 0:
                     header = bio.readline()
+                    print(header)
                     # `skiprows` can be only None here, so don't check it's type
                     # and just set to 1
                     kwargs["skiprows"] = 1
                 for _ in range(header_size):
                     header += bio.readline()
             else:
+                new_bio = bio
+                if kwargs["lineterminator"] not in ["\n", "\r", "\r\n"]:
+                    print("HERE")
+                    new_bio = CustomNewlineIterator(bio, kwargs["lineterminator"].encode("UTF-8"))
                 for _ in range(header_size):
-                    header += bio.readline()
+                    header += new_bio.readline()
+                new_bio.seek()
 
             bio.seek(start)
             to_read = header + bio.read(end - start)

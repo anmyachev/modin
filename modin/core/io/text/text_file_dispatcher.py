@@ -390,11 +390,15 @@ class TextFileDispatcher(FileDispatcher):
 
         rows_read = 0
 
-        if encoding and (
-            "utf" in encoding
-            and "8" not in encoding
-            or encoding == "unicode_escape"
-            or encoding.replace("-", "_") == "utf_8_sig"
+        if (
+            newline is not None
+            or encoding
+            and (
+                "utf" in encoding
+                and "8" not in encoding
+                or encoding == "unicode_escape"
+                or encoding.replace("-", "_") == "utf_8_sig"
+            )
         ):
             iterator = CustomNewlineIterator(f, newline)
         else:
@@ -418,7 +422,7 @@ class TextFileDispatcher(FileDispatcher):
         return outside_quotes, rows_read
 
     @classmethod
-    def compute_newline(cls, file_like, encoding, quotechar):
+    def compute_newline(cls, file_like, encoding, quotechar, lineterminator):
         """
         Compute byte or sequence of bytes indicating line endings.
 
@@ -436,10 +440,13 @@ class TextFileDispatcher(FileDispatcher):
         bytes
             line endings
         """
-        newline = None
+        newline = lineterminator
 
         if encoding is None:
-            return newline, quotechar.encode("UTF-8")
+            default_encoding = "UTF-8"
+            if newline is not None:
+                newline = newline.encode(default_encoding)
+            return newline, quotechar.encode(default_encoding)
 
         quotechar = quotechar.encode(encoding)
         encoding = encoding.replace("-", "_")
@@ -450,10 +457,12 @@ class TextFileDispatcher(FileDispatcher):
             or encoding == "unicode_escape"
             or encoding == "utf_8_sig"
         ):
-            # trigger for computing f.newlines
-            file_like.readline()
-            # in bytes
-            newline = file_like.newlines.encode(encoding)
+            if newline is None:
+                # trigger for computing f.newlines
+                file_like.readline()
+                # in bytes
+                newline = file_like.newlines.encode(encoding)
+
             boms = ()
             if encoding == "utf_8_sig":
                 boms = (codecs.BOM_UTF8,)
@@ -686,7 +695,7 @@ class TextFileDispatcher(FileDispatcher):
         if read_kwargs.get("dialect") is not None:
             return (False, "`dialect` parameter is not supported")
 
-        if read_kwargs["lineterminator"] is not None:
+        if False and read_kwargs["lineterminator"] is not None:
             return (False, "`lineterminator` parameter is not supported")
 
         if read_kwargs["escapechar"] is not None:
@@ -1085,7 +1094,10 @@ class TextFileDispatcher(FileDispatcher):
             old_pos = f.tell()
             fio = io.TextIOWrapper(f, encoding=encoding, newline="")
             newline, quotechar = cls.compute_newline(
-                fio, encoding, kwargs.get("quotechar", '"')
+                fio,
+                encoding,
+                kwargs.get("quotechar", '"'),
+                kwargs.get("lineterminator", None),
             )
             f.seek(old_pos)
 

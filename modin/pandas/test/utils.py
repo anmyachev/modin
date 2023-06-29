@@ -690,6 +690,10 @@ def df_equals(df1, df2, check_dtypes=True):
     # The typing behavior of how pandas treats its index is not consistent when the
     # length of the DataFrame or Series is 0, so we just verify that the contents are
     # the same.
+    # breakpoint()
+    #for i in range(len(df1)):
+    #    if not df1.iloc[i].equals(df2.iloc[i]):
+    #        breakpoint()
     if (
         hasattr(df1, "index")
         and hasattr(df2, "index")

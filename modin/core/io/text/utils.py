@@ -61,3 +61,6 @@ class CustomNewlineIterator:
     def seek(self):
         """Change the stream positition to where the last returned line ends."""
         self.file.seek(self.bytes_read - self.chunk_size, 1)
+
+    def readline(self):
+        return next(self.__iter__())
