@@ -492,11 +492,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         sort = kwargs.get("sort", False)
 
         if how in ["left", "inner"] and left_index is False and right_index is False:
-            right_pandas = right.to_pandas()
+            # right_pandas = right.to_pandas()
 
             kwargs["sort"] = False
 
-            def map_func(left, right=right_pandas, kwargs=kwargs):  # pragma: no cover
+            def map_func(left, right=right, kwargs=kwargs):  # pragma: no cover
+                right_pandas = right.to_pandas()
                 return pandas.merge(left, right_pandas, **kwargs)
 
             # Want to ensure that these are python lists
@@ -511,7 +512,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             if self._modin_frame.has_materialized_columns:
                 if left_on is None and right_on is None:
                     if on is None:
-                        on = [c for c in self.columns if c in right_pandas.columns]
+                        on = [c for c in self.columns if c in right.columns]
                     _left_on, _right_on = on, on
                 else:
                     if left_on is None or right_on is None:
@@ -523,7 +524,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 try:
                     new_columns, left_renamer, right_renamer = join_columns(
                         self.columns,
-                        right_pandas.columns,
+                        right.columns,
                         _left_on,
                         _right_on,
                         kwargs.get("suffixes", ("_x", "_y")),
@@ -538,7 +539,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         for old_col in left_renamer.keys():
                             new_dtypes.append(self.dtypes[old_col])
                         for old_col in right_renamer.keys():
-                            new_dtypes.append(right_pandas.dtypes[old_col])
+                            new_dtypes.append(right.dtypes[old_col])
                         new_dtypes = pandas.Series(new_dtypes, index=new_columns)
 
             new_self = self.__constructor__(
@@ -567,26 +568,26 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     keep_index = any(
                         o in self.index.names
                         and o in right_on
-                        and o in right_pandas.index.names
+                        and o in right.index.names
                         for o in left_on
                     )
                 elif on is not None:
                     keep_index = any(
-                        o in self.index.names and o in right_pandas.index.names
+                        o in self.index.names and o in right.index.names
                         for o in on
                     )
             else:
                 # Have to trigger columns materialization. Hope they're already available at this point.
                 if left_on is not None and right_on is not None:
                     keep_index = any(
-                        o not in right_pandas.columns
+                        o not in right.columns
                         and o in left_on
                         and o not in self.columns
                         for o in right_on
                     )
                 elif on is not None:
                     keep_index = any(
-                        o not in right_pandas.columns and o not in self.columns
+                        o not in right.columns and o not in self.columns
                         for o in on
                     )
 
