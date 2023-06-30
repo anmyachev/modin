@@ -494,8 +494,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if how in ["left", "inner"] and left_index is False and right_index is False:
             # right_pandas = right.to_pandas()
             import ray
-            remote_to_pandas = ray.remote(lambda df: df.to_pandas())
-            right_pandas_ref = remote_to_pandas.remote(right)
+            # self._partition_mgr_cls.to_pandas(self._partitions)
+            remote_to_pandas = ray.remote(lambda mgr, partitions: mgr.to_pandas(partitions))
+            right_pandas_ref = remote_to_pandas.remote(right._modin_frame._partition_mgr_cls, right._modin_frame._partitions)
 
             kwargs["sort"] = False
 
