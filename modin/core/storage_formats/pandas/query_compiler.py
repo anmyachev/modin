@@ -493,11 +493,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         if how in ["left", "inner"] and left_index is False and right_index is False:
             # right_pandas = right.to_pandas()
+            import ray
+            remote_to_pandas = ray.remote(lambda df: df.to_pandas())
+            right_pandas_ref = remote_to_pandas.remote(right)
 
             kwargs["sort"] = False
 
-            def map_func(left, right=right, kwargs=kwargs):  # pragma: no cover
-                right_pandas = right.to_pandas()
+            def map_func(left):  # pragma: no cover
+                right_pandas = ray.get(right_pandas_ref)
                 return pandas.merge(left, right_pandas, **kwargs)
 
             # Want to ensure that these are python lists
