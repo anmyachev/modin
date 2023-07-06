@@ -716,9 +716,14 @@ class Series(BasePandasDataset):
             result_names=result_names,
         )
         if align_axis == "columns" or align_axis == 1:
-            # Pandas.DataFrame.Compare returns a dataframe with a multidimensional index object as the
-            # columns so we have to change column object back.
-            result.columns = pandas.Index(["self", "other"])
+            if len(result.columns):
+                # Pandas.DataFrame.Compare returns a dataframe with a multidimensional index object as the
+                # columns so we have to change column object back.
+                result.columns = pandas.Index(result_names)
+            else:
+                from .dataframe import DataFrame
+
+                result = DataFrame([], index=[], columns=result_names)
         else:
             result = result.squeeze().rename(None)
         return result
@@ -1444,6 +1449,7 @@ class Series(BasePandasDataset):
         non_mapping = is_scalar(index) or (
             is_list_like(index) and not is_dict_like(index)
         )
+        breakpoint()
         if non_mapping:
             if inplace:
                 self.name = index

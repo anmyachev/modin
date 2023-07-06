@@ -929,3 +929,15 @@ def test_compare(align_axis, keep_shape, keep_equal):
     modin_result = modin_series2.compare(modin_series1, **kwargs)
     pandas_result = pandas_series2.compare(pandas_series1, **kwargs)
     assert to_pandas(modin_result).equals(pandas_result)
+
+    series_data = 1
+    pandas_series = pandas.Series(series_data)
+    modin_series = pd.Series(series_data)
+
+    modin_result = modin_series.compare(modin_series, **kwargs)
+    pandas_result = pandas_series.compare(pandas_series, **kwargs)
+    assert to_pandas(modin_result).equals(pandas_result)
+
+    modin_result = modin_series.compare(modin_series, result_names=("left", "right"), **kwargs)
+    pandas_result = pandas_series.compare(pandas_series, result_names=("left", "right"), **kwargs)
+    assert to_pandas(modin_result).equals(pandas_result)
