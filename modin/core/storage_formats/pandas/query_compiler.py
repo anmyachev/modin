@@ -2915,8 +2915,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
             df.insert(internal_idx, column, value)
             return df
 
+        def new_insert(partition, row_internal_indices, col_internal_indices, item):
+            internal_idx = int(col_internal_indices[0])
+            partition.insert(internal_idx, column, item)
+            return partition
+
         # TODO: rework by passing list-like values to `apply_select_indices`
         # as an item to distribute
+        '''
         new_modin_frame = self._modin_frame.apply_full_axis_select_indices(
             0,
             insert,
@@ -2924,6 +2930,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
             keep_remaining=True,
             new_index=self.index,
             new_columns=self.columns.insert(loc, column),
+        )
+        '''
+        print("-------------NEW-----------WAY")
+        new_modin_frame = self._modin_frame.apply_select_indices(
+            axis=None,
+            func=new_insert,
+            row_labels=slice(None),
+            col_labels=[loc],
+            new_index=self.index,
+            new_columns=self.columns.insert(loc, column),
+            keep_remaining=True,
+            item_to_distribute=value,
         )
         return self.__constructor__(new_modin_frame)
 

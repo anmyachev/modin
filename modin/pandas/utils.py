@@ -338,6 +338,8 @@ def broadcast_item(
     new_row_len = (
         len(obj.index[row_lookup]) if isinstance(row_lookup, slice) else len(row_lookup)
     )
+    if isinstance(col_lookup, str):
+        col_lookup = [col_lookup]
     new_col_len = (
         len(obj.columns[col_lookup])
         if isinstance(col_lookup, slice)
@@ -359,12 +361,18 @@ def broadcast_item(
         if axes_to_reindex:
             item = item.reindex(**axes_to_reindex)
     try:
-        item = np.array(item)
+        from modin.numpy import array
+        if not isinstance(item, array):
+            item = np.array(item)
         if np.prod(to_shape) == np.prod(item.shape):
-            return item.reshape(to_shape)
+            if to_shape[1] != 1 or not isinstance(item, array):
+                return item.reshape(to_shape)
+            else:
+                return item
         else:
             return np.broadcast_to(item, to_shape)
     except ValueError:
+        # breakpoint()
         from_shape = np.array(item).shape
         raise ValueError(
             f"could not broadcast input array from shape {from_shape} into shape "

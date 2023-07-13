@@ -1320,10 +1320,13 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
                 if item_to_distribute is not no_default:
                     if isinstance(item_to_distribute, np.ndarray):
-                        item = item_to_distribute[
-                            row_position_counter : row_position_counter + row_offset,
-                            col_position_counter : col_position_counter + col_offset,
-                        ]
+                        if len(item_to_distribute.shape) == 1:
+                            item = item_to_distribute[row_position_counter : row_position_counter + row_offset]
+                        else:
+                            item = item_to_distribute[
+                                row_position_counter : row_position_counter + row_offset,
+                                col_position_counter : col_position_counter + col_offset,
+                            ]
                     else:
                         item = item_to_distribute
                     item = {"item": item}

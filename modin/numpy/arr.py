@@ -171,17 +171,25 @@ class array(object):
         ErrorMessage.single_warning(
             "Using Modin's new NumPy API. To convert from a Modin object to a NumPy array, either turn off the ExperimentalNumPyAPI flag, or use `modin.utils.to_numpy`."
         )
+        flag = False
         if isinstance(object, array):
+            print("array")
+            flag = True
             _query_compiler = object._query_compiler.copy()
             if not copy:
                 object._add_sibling(self)
             _ndim = object._ndim
         elif isinstance(object, (pd.DataFrame, pd.Series)):
+            print("dataframe or series")
+            flag = True
             _query_compiler = object._query_compiler.copy()
             if not copy:
                 object._add_sibling(self)
             _ndim = 1 if isinstance(object, pd.Series) else 2
+
         if _query_compiler is not None:
+            if not flag:
+                print("just query_compiler")
             self._query_compiler = _query_compiler
             self._ndim = _ndim
             new_dtype = pandas.core.dtypes.cast.find_common_type(
@@ -734,6 +742,16 @@ class array(object):
 
     absolute = __abs__
 
+    def __iter__(self):
+        """
+        Return an iterator of the values.
+
+        Returns
+        -------
+        iterable
+        """
+        return self._to_numpy().__iter__()
+
     def __invert__(self):
         """
         Apply bitwise inverse to each element of the `BasePandasDataset`.
@@ -798,16 +816,18 @@ class array(object):
                 if dtype is not None
                 else (out.dtype if out is not None else operand_dtype)
             )
-            self._query_compiler = self._query_compiler.astype(
-                {col_name: out_dtype for col_name in self._query_compiler.columns}
-            )
+            if True or self.dtype != out_dtype:
+                self._query_compiler = self._query_compiler.astype(
+                    {col_name: out_dtype for col_name in self._query_compiler.columns}
+                )
         if is_scalar(other):
             # Return early, since no need to check broadcasting behavior if RHS is a scalar
             return (self._query_compiler, other, self._ndim, {})
         elif cast_input_types:
-            other._query_compiler = other._query_compiler.astype(
-                {col_name: out_dtype for col_name in other._query_compiler.columns}
-            )
+            if True or other.dtype != out_dtype:
+                other._query_compiler = other._query_compiler.astype(
+                    {col_name: out_dtype for col_name in other._query_compiler.columns}
+                )
 
         if not isinstance(other, array):
             raise TypeError(
@@ -1977,6 +1997,7 @@ class array(object):
     def sum(
         self, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=True
     ):
+        # breakpoint()
         out_dtype = (
             dtype
             if dtype is not None
@@ -2048,10 +2069,19 @@ class array(object):
         if apply_axis > 1:
             raise numpy.AxisError(axis, 2)
         target = where.where(self, 0) if isinstance(where, array) else self
-        result = target._query_compiler.astype(
-            {col_name: out_dtype for col_name in target._query_compiler.columns}
-        ).sum(axis=apply_axis, skipna=False)
-        result = result.add(initial)
+        result = target
+        if result.dtype != out_dtype:
+            result = result._query_compiler.astype(
+                {col_name: out_dtype for col_name in result._query_compiler.columns}
+            )
+        if hasattr(result, "_query_compiler"):
+            result = result._query_compiler
+        dtypes_cache = result._modin_frame._dtypes
+        result = result.sum(axis=apply_axis, skipna=False)
+        if apply_axis:
+            result._modin_frame.set_dtypes_cache(pandas.Series([dtypes_cache[0]]))
+        if initial:
+            result = result.add(initial)
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
         if new_ndim == 0:
             return result.to_numpy()[0, 0] if truthy_where else initial

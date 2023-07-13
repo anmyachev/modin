@@ -147,6 +147,7 @@ def exp(
 
 def argmax(a, axis=None, out=None, *, keepdims=None):
     a = try_convert_from_interoperable_type(a)
+    # breakpoint()
     if not isinstance(a, array):
         ErrorMessage.bad_type_for_numpy_op("argmax", type(a))
         return numpy.argmax(a, axis=axis, out=out, keepdims=keepdims)

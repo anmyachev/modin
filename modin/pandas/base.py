@@ -3438,7 +3438,15 @@ class BasePandasDataset(ClassLogger):
         arr : np.ndarray
             NumPy representation of Modin object.
         """
-        arr = self.to_numpy(dtype)
+        from modin.config import ExperimentalNumPyAPI
+        old_value = ExperimentalNumPyAPI.get()
+        try:
+            if old_value:
+                ExperimentalNumPyAPI.put(False)
+            arr = self.to_numpy(dtype)
+        finally:
+            if old_value:
+                ExperimentalNumPyAPI.put(True)
         return arr
 
     def __copy__(self, deep=True):

@@ -465,6 +465,14 @@ class DataFrame(BasePandasDataset):
                 level, by = by, None
             elif level is None:
                 by = self.__getitem__(by)._query_compiler
+                if (
+                    by._modin_frame._partitions.shape
+                    != self._query_compiler._modin_frame._partitions.shape
+                ):
+                    # this updates '_modin_frame' inplace
+                    self._query_compiler._modin_frame._filter_empties(
+                        compute_metadata=False
+                    )
         elif isinstance(by, Series):
             drop = by._parent is self
             idx_name = by.name
@@ -2434,7 +2442,18 @@ class DataFrame(BasePandasDataset):
                 self.columns = prev_index.insert(0, key)
                 return
             # Do new column assignment after error checks and possible value modifications
-            self.insert(loc=len(self.columns), column=key, value=value)
+            item = value
+            if not hasattr(value, "_query_compler"):
+                item = broadcast_item(
+                    self,
+                    slice(None),
+                    key,
+                    value,
+                    need_columns_reindex=False,
+                )
+            if hasattr(item, "_query_compiler"):
+                item = item._query_compiler
+            self.insert(loc=len(self.columns), column=key, value=item)
             return
 
         if not hashable(key):

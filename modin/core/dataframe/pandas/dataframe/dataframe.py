@@ -982,6 +982,21 @@ class PandasDataframe(ClassLogger):
         if col_positions is None and row_positions is None:
             return self.copy()
 
+        if col_positions is None and row_positions is not None:
+            all_rows = None
+            if self.has_materialized_index:
+                all_rows = len(self.index)
+            elif self._row_lengths_cache:
+                all_rows = sum(self._row_lengths_cache)
+            if all_rows:
+                print(f"ratio: {len(row_positions)=} : {all_rows=}")
+                if len(row_positions) > int(0.7 * all_rows):
+                    # fast path
+                    print("USE NEW PATH")
+                    return self._reorder_labels(
+                        row_positions=row_positions, col_positions=col_positions
+                    )
+
         sorted_row_positions = sorted_col_positions = None
 
         if row_positions is not None:
@@ -1110,14 +1125,24 @@ class PandasDataframe(ClassLogger):
             row_order_mapping = dict(
                 zip(sorted_row_positions, range(len(row_positions)))
             )
-            new_row_order = [row_order_mapping[idx] for idx in row_positions]
+            new_row_order = np.fromiter(
+                (row_order_mapping[idx] for idx in row_positions),
+                dtype="int64",
+                count=len(row_positions),
+            )
+            # new_row_order = [row_order_mapping[idx] for idx in row_positions]
         else:
             new_row_order = None
         if col_positions is not None:
             col_order_mapping = dict(
                 zip(sorted_col_positions, range(len(col_positions)))
             )
-            new_col_order = [col_order_mapping[idx] for idx in col_positions]
+            new_col_order = np.fromiter(
+                (col_order_mapping[idx] for idx in col_positions),
+                dtype="int64",
+                count=len(col_positions),
+            )
+            # new_col_order = [col_order_mapping[idx] for idx in col_positions]
         else:
             new_col_order = None
         return intermediate._reorder_labels(
@@ -2780,12 +2805,19 @@ class PandasDataframe(ClassLogger):
                 self._row_lengths_cache,
                 self._column_widths_cache,
             )
+            columns_cache = self._column_widths_cache
+            if (
+                new_columns is not None
+                and columns_cache is not None
+                and len(new_columns) != sum(columns_cache)
+            ):
+                columns_cache[-1] = columns_cache[-1] + 1
             return self.__constructor__(
                 new_partitions,
                 new_index,
                 new_columns,
                 self._row_lengths_cache,
-                self._column_widths_cache,
+                columns_cache,
             )
 
     @lazy_metadata_decorator(apply_axis="both")
