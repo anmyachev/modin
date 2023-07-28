@@ -324,8 +324,11 @@ def apply_func(partition, func, *args, **kwargs):
     -------
     pandas.DataFrame
         The resulting pandas DataFrame.
-    str
-        The node IP address of the worker process.
+    tuple
+        (int, int, str)
+            The number of rows of the resulting pandas DataFrame.
+            The number of columns of the resulting pandas DataFrame.
+            The node IP address of the worker process.
 
     Notes
     -----
@@ -333,7 +336,14 @@ def apply_func(partition, func, *args, **kwargs):
     destructuring it causes a performance penalty.
     """
     result = func(partition, *args, **kwargs)
-    return result, get_ip()
+    return (
+        result,
+        (
+            len(result) if hasattr(result, "__len__") else 0,
+            len(result.columns) if hasattr(result, "columns") else 0,
+            get_ip(),
+        ),
+    )
 
 
 def apply_list_of_funcs(call_queue, partition):
@@ -351,9 +361,19 @@ def apply_list_of_funcs(call_queue, partition):
     -------
     pandas.DataFrame
         The resulting pandas DataFrame.
-    str
-        The node IP address of the worker process.
+    tuple
+        (int, int, str)
+            The number of rows of the resulting pandas DataFrame.
+            The number of columns of the resulting pandas DataFrame.
+            The node IP address of the worker process.
     """
     for func, f_args, f_kwargs in call_queue:
         partition = func(partition, *f_args, **f_kwargs)
-    return partition, get_ip()
+    return (
+        partition,
+        (
+            len(partition) if hasattr(partition, "__len__") else 0,
+            len(partition.columns) if hasattr(partition, "columns") else 0,
+            get_ip(),
+        ),
+    )
