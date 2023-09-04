@@ -24,6 +24,7 @@ import modin.pandas
 import pandas
 import numpy as np
 import uuid
+import os
 from typing import Optional, Union
 
 from .compatibility import (
@@ -39,6 +40,46 @@ POSSIBLE_IMPL = {
     "pandas": pandas,
 }
 IMPL = POSSIBLE_IMPL[ASV_USE_IMPL]
+
+if os.environ.get("USE_PYARROW_BACKEND"):
+    # patch them
+    old_read_parquet = IMPL.read_parquet
+
+    def read_parquet(*args, **kwargs):
+        print("PATCHED READ_PARQUET FUNCTION IS USED")
+        return old_read_parquet(*args, dtype_backend="pyarrow", **kwargs)
+
+    IMPL.read_parquet = read_parquet
+
+    old_read_csv = IMPL.read_csv
+
+    def read_csv(*args, **kwargs):
+        print("PATCHED READ_PARQUET FUNCTION IS USED")
+        return old_read_csv(*args, dtype_backend="pyarrow", **kwargs)
+
+    IMPL.read_csv = read_csv
+
+    old_dataframe = IMPL.DataFrame
+
+    class DataFrame(old_dataframe):
+        def __init__(self, *args, **kwargs):
+            print("CUSTOM DATAFRAME CONSTRUCTOR IS USED")
+            res = old_dataframe(*args, **kwargs)
+            res = res.convert_dtypes(dtype_backend="pyarrow")
+            super().__init__(res)
+
+    IMPL.DataFrame = DataFrame
+
+    old_series = IMPL.Series
+
+    class Series(old_series):
+        def __init__(self, *args, **kwargs):
+            print("CUSTOM SERIES CONSTRUCTOR IS USED")
+            res = old_series(*args, **kwargs)
+            res = res.convert_dtypes(dtype_backend="pyarrow")
+            super().__init__(res)
+
+    IMPL.Series = Series
 
 
 def translator_groupby_ngroups(groupby_ngroups: Union[str, int], shape: tuple) -> int:
