@@ -12,9 +12,6 @@
 # governing permissions and limitations under the License.
 
 import numpy as np
-import pandas as pd
-
-pd.options.future.infer_string = True
 
 from ..utils import (
     generate_dataframe,

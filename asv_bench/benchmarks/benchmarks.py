@@ -20,9 +20,6 @@
 # measurements
 
 import numpy as np
-import pandas as pd
-
-pd.options.future.infer_string = True
 import pandas._testing as tm
 import math
 
