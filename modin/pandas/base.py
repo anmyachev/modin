@@ -1494,7 +1494,10 @@ class BasePandasDataset(ClassLogger):
         else:
             df = self
         duplicated = df.duplicated(keep=keep)
-        result = self[~duplicated]
+        self._query_compiler._invert_when_getting = True
+        # print(f"{duplicated=}")
+        result = self[duplicated]
+        del self._query_compiler._invert_when_getting
         if ignore_index:
             result.index = pandas.RangeIndex(stop=len(result))
         if inplace:

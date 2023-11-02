@@ -2680,11 +2680,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # END Map across rows/columns
 
     # __getitem__ methods
-    __getitem_bool = Binary.register(
-        lambda df, r: df[[r]] if is_scalar(r) else df[r],
-        join_type="left",
-        labels="drop",
-    )
+    def __getitem_bool(self, *args, **kwargs):
+        if hasattr(self, "_invert_when_getting"):
+            func = lambda df, r: df[[~r]] if is_scalar(r) else df[~r]
+        else:
+            func = lambda df, r: df[[r]] if is_scalar(r) else df[r]
+
+        return Binary.register(
+            func,
+            join_type="left",
+            labels="drop",
+        )(self, *args, **kwargs)
 
     # __setitem__ methods
     def setitem_bool(self, row_loc, col_loc, item):
