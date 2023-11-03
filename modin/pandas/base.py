@@ -1193,7 +1193,10 @@ class BasePandasDataset(ClassLogger):
         Make a copy of the object's metadata.
         """
         if deep:
-            return self.__constructor__(query_compiler=self._query_compiler.copy())
+            qc = self._query_compiler.copy()
+            if self._pandas_class is pandas.Series:
+                qc._shape_hint = "column"
+            return self.__constructor__(query_compiler=qc)
         new_obj = self.__constructor__(query_compiler=self._query_compiler)
         self._add_sibling(new_obj)
         return new_obj

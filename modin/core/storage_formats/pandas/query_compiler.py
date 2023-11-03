@@ -680,6 +680,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if self.lazy_execution:
 
             def _reset(df, *axis_lengths, partition_idx):  # pragma: no cover
+                if "name" in kwargs:
+                    df = df.squeeze(axis=1)
                 df = df.reset_index(**kwargs)
 
                 if isinstance(df.index, pandas.RangeIndex):
