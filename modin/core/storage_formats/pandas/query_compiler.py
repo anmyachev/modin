@@ -683,6 +683,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 if "name" in kwargs:
                     df = df.squeeze(axis=1)
                 df = df.reset_index(**kwargs)
+                if hasattr(df, "to_frame"):
+                    df = df.to_frame()
 
                 if isinstance(df.index, pandas.RangeIndex):
                     # If the resulting index is a pure RangeIndex that means that
