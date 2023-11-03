@@ -1596,6 +1596,23 @@ class Series(BasePandasDataset):
                 "Cannot reset_index inplace on a Series to create a DataFrame"
             )
         else:
+            if not self._query_compiler.lazy_execution:
+                obj = self.copy()
+                obj.name = name
+                from .dataframe import DataFrame
+
+                # Here `query_compiler` is passed instead of `obj` to avoid unnecessary `copy()`
+                # inside `DataFrame` constructor
+                return DataFrame(query_compiler=obj._query_compiler).reset_index(
+                    level=level,
+                    drop=drop,
+                    inplace=inplace,
+                    col_level=0,
+                    col_fill="",
+                    allow_duplicates=allow_duplicates,
+                    names=None,
+                )
+
             new_query_compiler = self._query_compiler.reset_index(
                 level=level,
                 drop=drop,
