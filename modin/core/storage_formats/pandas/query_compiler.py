@@ -3813,15 +3813,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         drop=False,
         series_groupby=False,
     ):
-        # Defaulting to pandas in case of an empty frame as we can't process it properly.
-        # Higher API level won't pass empty data here unless the frame has delayed
-        # computations. So we apparently lose some laziness here (due to index access)
-        # because of the inability to process empty groupby natively.
-        if len(self.columns) == 0 or len(self.index) == 0:
-            return super().groupby_agg(
-                by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
-            )
-
         if ExperimentalGroupbyImpl.get():
             try:
                 return self._groupby_shuffle(
@@ -3839,6 +3830,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     f"Can't use experimental reshuffling groupby implementation because of: {e}"
                     + "\nFalling back to a full-axis implementation."
                 )
+
+        # Defaulting to pandas in case of an empty frame as we can't process it properly.
+        # Higher API level won't pass empty data here unless the frame has delayed
+        # computations. So we apparently lose some laziness here (due to index access)
+        # because of the inability to process empty groupby natively.
+        if len(self.columns) == 0 or sum(self._modin_frame.row_lengths) == 0:
+            return super().groupby_agg(
+                by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
+            )
 
         if isinstance(agg_func, dict) and GroupbyReduceImpl.has_impl_for(agg_func):
             return self._groupby_dict_reduce(

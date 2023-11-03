@@ -1046,8 +1046,6 @@ class DataFrameGroupBy(ClassLogger):
             ),
             numeric_only=False,
         )
-        # pandas does not name the index on rank
-        result._query_compiler.set_index_name(None)
         return result
 
     @property
@@ -1677,18 +1675,20 @@ class DataFrameGroupBy(ClassLogger):
         else:
             groupby_qc = self._query_compiler
 
-        return type(self._df)(
-            query_compiler=qc_method(
-                groupby_qc,
-                by=self._by,
-                axis=self._axis,
-                groupby_kwargs=self._kwargs,
-                agg_args=agg_args,
-                agg_kwargs=agg_kwargs,
-                drop=self._drop,
-                **kwargs,
-            )
+        res = qc_method(
+            groupby_qc,
+            by=self._by,
+            axis=self._axis,
+            groupby_kwargs=self._kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=self._drop,
+            **kwargs,
         )
+        if self._df._pandas_class is pandas.Series:
+            res._shape_hint = "column"
+
+        return type(self._df)(query_compiler=res)
 
     def _check_index(self, result):
         """
