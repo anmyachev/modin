@@ -371,6 +371,7 @@ class PandasDataframe(ClassLogger):
         def dtype_builder(df):
             return df.apply(lambda col: find_common_type(col.values), axis=0)
 
+        # print(f"compute dtypes: {columns=}")
         if columns is not None:
             # Sorting positions to request columns in the order they're stored (it's more efficient)
             numeric_indices = sorted(self.columns.get_indexer_for(columns))
@@ -726,6 +727,9 @@ class PandasDataframe(ClassLogger):
         List of int
             Size of partitions alongside specified `axis`.
         """
+        # print(f"_compute_axis_labels_and_lengths: {axis}")
+        # if axis == 0:
+        #     breakpoint()
         if partitions is None:
             partitions = self._partitions
         new_index, internal_idx = self._partition_mgr_cls.get_indices(axis, partitions)
@@ -2421,9 +2425,9 @@ class PandasDataframe(ClassLogger):
 
         # don't want to inherit over-partitioning so doing this 'min' check
         ideal_num_new_partitions = min(len(self._partitions), NPartitions.get())
-        m = len(self.index) / ideal_num_new_partitions
+        m = sum(self.row_lengths) / ideal_num_new_partitions
         sampling_probability = (1 / m) * np.log(
-            ideal_num_new_partitions * len(self.index)
+            ideal_num_new_partitions * sum(self.row_lengths)
         )
         # If this df is overpartitioned, we try to sample each partition with probability
         # greater than 1, which leads to an error. In this case, we can do one of the following
@@ -2435,8 +2439,13 @@ class PandasDataframe(ClassLogger):
         if sampling_probability >= 1:
             from modin.config import MinPartitionSize
 
-            ideal_num_new_partitions = round(len(self.index) / MinPartitionSize.get())
-            if len(self.index) < MinPartitionSize.get() or ideal_num_new_partitions < 2:
+            ideal_num_new_partitions = round(
+                sum(self.row_lengths) / MinPartitionSize.get()
+            )
+            if (
+                sum(self.row_lengths) < MinPartitionSize.get()
+                or ideal_num_new_partitions < 2
+            ):
                 # If the data is too small, we shouldn't try reshuffling/repartitioning but rather
                 # simply combine all partitions and apply the sorting to the whole dataframe
                 return self.combine_and_apply(func=func)

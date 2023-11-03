@@ -357,11 +357,23 @@ class DataFrameGroupBy(ClassLogger):
                     engine_kwargs=engine_kwargs,
                 )
             )
-        return self._wrap_aggregation(
+        res = self._wrap_aggregation(
             type(self._query_compiler).groupby_min,
             agg_kwargs=dict(min_count=min_count),
             numeric_only=numeric_only,
         )
+        if (
+            not numeric_only
+            and self._as_index
+            and self._query_compiler._modin_frame.has_materialized_columns
+            and hasattr(self._by, "_modin_frame")
+            and self._by._modin_frame.has_materialized_columns
+        ):
+            res._query_compiler._modin_frame.set_columns_cache(
+                self._query_compiler.columns.drop(self._by.columns)
+            )
+        res._query_compiler._shape_hint = "column"
+        return res
 
     def max(self, numeric_only=False, min_count=-1, engine=None, engine_kwargs=None):
         if engine not in ("cython", None) and engine_kwargs is not None:
