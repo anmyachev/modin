@@ -357,11 +357,23 @@ class DataFrameGroupBy(ClassLogger):
                     engine_kwargs=engine_kwargs,
                 )
             )
-        return self._wrap_aggregation(
+        res = self._wrap_aggregation(
             type(self._query_compiler).groupby_min,
             agg_kwargs=dict(min_count=min_count),
             numeric_only=numeric_only,
         )
+        if (
+            not numeric_only
+            and self._as_index
+            and self._query_compiler._modin_frame.has_materialized_columns
+            and hasattr(self._by, "_modin_frame")
+            and self._by._modin_frame.has_materialized_columns
+        ):
+            res._query_compiler._modin_frame.set_columns_cache(
+                self._query_compiler.columns.drop(self._by.columns, errors="ignore")
+            )
+        res._query_compiler._shape_hint = "column"
+        return res
 
     def max(self, numeric_only=False, min_count=-1, engine=None, engine_kwargs=None):
         if engine not in ("cython", None) and engine_kwargs is not None:
@@ -1034,8 +1046,6 @@ class DataFrameGroupBy(ClassLogger):
             ),
             numeric_only=False,
         )
-        # pandas does not name the index on rank
-        result._query_compiler.set_index_name(None)
         return result
 
     @property
@@ -1096,6 +1106,7 @@ class DataFrameGroupBy(ClassLogger):
             numeric_only=False,
         )
         if not isinstance(result, Series):
+            result._query_compiler._shape_hint = "column"
             result = result.squeeze(axis=1)
         if not self._kwargs.get("as_index") and not isinstance(result, Series):
             result = (
@@ -1664,18 +1675,20 @@ class DataFrameGroupBy(ClassLogger):
         else:
             groupby_qc = self._query_compiler
 
-        return type(self._df)(
-            query_compiler=qc_method(
-                groupby_qc,
-                by=self._by,
-                axis=self._axis,
-                groupby_kwargs=self._kwargs,
-                agg_args=agg_args,
-                agg_kwargs=agg_kwargs,
-                drop=self._drop,
-                **kwargs,
-            )
+        res = qc_method(
+            groupby_qc,
+            by=self._by,
+            axis=self._axis,
+            groupby_kwargs=self._kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=self._drop,
+            **kwargs,
         )
+        if self._df._pandas_class is pandas.Series:
+            res._shape_hint = "column"
+
+        return type(self._df)(query_compiler=res)
 
     def _check_index(self, result):
         """
