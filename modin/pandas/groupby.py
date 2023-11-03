@@ -370,7 +370,7 @@ class DataFrameGroupBy(ClassLogger):
             and self._by._modin_frame.has_materialized_columns
         ):
             res._query_compiler._modin_frame.set_columns_cache(
-                self._query_compiler.columns.drop(self._by.columns)
+                self._query_compiler.columns.drop(self._by.columns, errors="ignore")
             )
         res._query_compiler._shape_hint = "column"
         return res
