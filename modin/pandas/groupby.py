@@ -1108,6 +1108,7 @@ class DataFrameGroupBy(ClassLogger):
             numeric_only=False,
         )
         if not isinstance(result, Series):
+            result._query_compiler._shape_hint = "column"
             result = result.squeeze(axis=1)
         if not self._kwargs.get("as_index") and not isinstance(result, Series):
             result = (
