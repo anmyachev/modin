@@ -42,7 +42,14 @@ class GenericRayDataframePartitionManager(PandasDataframePartitionManager):
         """
         if partitions.shape[1] == 1:
             parts = cls.get_objects_from_partitions(partitions.flatten())
-            parts = [part.to_numpy(**kwargs) for part in parts]
+            # breakpoint()
+            # inconsistency: parts[0].to_numpy(dtype="int64", copy=False, na_value=np.nan)
+            # *** ValueError: cannot convert float NaN to integer
+            # vs
+            # parts[0]["result"].to_numpy(dtype="int64", copy=False, na_value=np.nan)
+            # array([1577840521123543000, 1577934062321654000, 1578027849987321000], dtype=int64)
+            # breakpoint()
+            parts = [(part.squeeze() if len(part.columns) == 1 else part).to_numpy(**kwargs) for part in parts]
         else:
             parts = RayWrapper.materialize(
                 [
@@ -55,4 +62,6 @@ class GenericRayDataframePartitionManager(PandasDataframePartitionManager):
             )
         rows, cols = partitions.shape
         parts = [parts[i * cols : (i + 1) * cols] for i in range(rows)]
+        if len(parts[0][0].shape) == 1:
+            return np.block(parts).T
         return np.block(parts)

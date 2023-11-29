@@ -572,6 +572,10 @@ class _LocationIndexerBase(ClassLogger):
             assert col_loc == slice(None)
             return masked_df
         # Passing `slice(None)` as a row indexer since we've just applied it
+        # breakpoint()
+        # Maybe type(self)(masked_df)[col_loc] for Series?
+        if isinstance(masked_df, Series):
+            return type(self)(masked_df)[col_loc]
         return type(self)(masked_df)[(slice(None), col_loc)]
 
     def _multiindex_possibly_contains_key(self, axis, key):

@@ -663,7 +663,7 @@ def assert_dtypes_equal(df1, df2):
                 break
 
 
-def df_equals(df1, df2, check_dtypes=True):
+def df_equals(df1, df2, check_dtypes=True, check_exact=False):
     """Tests if df1 and df2 are equal.
 
     Args:
@@ -732,7 +732,7 @@ def df_equals(df1, df2, check_dtypes=True):
     elif isinstance(df1, pandas.Index) and isinstance(df2, pandas.Index):
         assert_index_equal(df1, df2)
     elif isinstance(df1, pandas.Series) and isinstance(df2, pandas.Series):
-        assert_series_equal(df1, df2, check_dtype=False, check_series_type=False)
+        assert_series_equal(df1, df2, check_dtype=False, check_series_type=False, check_exact=check_exact)
     elif (
         hasattr(df1, "dtype")
         and hasattr(df2, "dtype")
