@@ -49,7 +49,7 @@ class GenericRayDataframePartitionManager(PandasDataframePartitionManager):
             # parts[0]["result"].to_numpy(dtype="int64", copy=False, na_value=np.nan)
             # array([1577840521123543000, 1577934062321654000, 1578027849987321000], dtype=int64)
             # breakpoint()
-            parts = [(part.squeeze() if len(part.columns) == 1 else part).to_numpy(**kwargs) for part in parts]
+            parts = [(part.squeeze(axis=1) if len(part.columns) == 1 else part).to_numpy(**kwargs) for part in parts]
         else:
             parts = RayWrapper.materialize(
                 [
