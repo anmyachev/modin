@@ -50,6 +50,8 @@ class GenericRayDataframePartitionManager(PandasDataframePartitionManager):
             # array([1577840521123543000, 1577934062321654000, 1578027849987321000], dtype=int64)
             # breakpoint()
             parts = [(part.squeeze(axis=1) if len(part.columns) == 1 else part).to_numpy(**kwargs) for part in parts]
+            # reshape to 2d numpy array
+            parts = [part.reshape(len(part), 1) if len(part.shape) == 1 else part for part in parts]
         else:
             parts = RayWrapper.materialize(
                 [
@@ -62,6 +64,4 @@ class GenericRayDataframePartitionManager(PandasDataframePartitionManager):
             )
         rows, cols = partitions.shape
         parts = [parts[i * cols : (i + 1) * cols] for i in range(rows)]
-        if len(parts[0][0].shape) == 1:
-            return np.block(parts).T
         return np.block(parts)
