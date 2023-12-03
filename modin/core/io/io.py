@@ -417,11 +417,9 @@ class BaseIO:
         **kwargs,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_pickle`")
-        return cls.from_pandas(
-            pandas.read_pickle(
-                filepath_or_buffer,
-                **kwargs,
-            )
+        return pandas.read_pickle(
+            filepath_or_buffer,
+            **kwargs,
         )
 
     @classmethod
@@ -625,8 +623,8 @@ class BaseIO:
         Pickle (serialize) object to file.
         """
         ErrorMessage.default_to_pandas("`to_pickle`")
-        if isinstance(obj, BaseQueryCompiler):
-            obj = obj.to_pandas()
+        if hasattr(obj, "_to_pandas"):
+            obj = obj._to_pandas()
 
         return pandas.to_pickle(
             obj,

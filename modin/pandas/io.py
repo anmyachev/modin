@@ -63,6 +63,7 @@ from pandas._typing import (
 from pandas.io.parsers import TextFileReader
 from pandas.io.parsers.readers import _c_parser_defaults
 
+from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, enable_logging
 from modin.utils import _inherit_docstrings, expanduser_path_arg
@@ -583,7 +584,15 @@ def read_pickle(
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return DataFrame(query_compiler=FactoryDispatcher.read_pickle(**kwargs))
+    obj = FactoryDispatcher.read_pickle(**kwargs)
+    if not isinstance(obj, BaseQueryCompiler):
+        # if `obj` is not `BaseQueryComplier`, it means there is
+        # not enough information to compute the type of the result.
+        from modin.pandas.utils import from_pandas
+
+        return from_pandas(obj)
+    else:
+        return DataFrame(query_compiler=obj)
 
 
 @_inherit_docstrings(pandas.read_sql, apilink="pandas.read_sql")
@@ -705,8 +714,6 @@ def to_pickle(
 ) -> None:
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    if isinstance(obj, DataFrame):
-        obj = obj._query_compiler
     return FactoryDispatcher.to_pickle(
         obj,
         filepath_or_buffer=filepath_or_buffer,

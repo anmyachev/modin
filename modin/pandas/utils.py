@@ -20,7 +20,7 @@ import pandas
 from pandas._typing import AggFuncType, AggFuncTypeBase, AggFuncTypeDict, IndexLabel
 from pandas.util._decorators import doc
 
-from modin.utils import hashable
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL, hashable
 
 _doc_binary_operation = """
 Return {operation} of {left} and `{right}` (binary operator `{bin_op}`).
@@ -77,8 +77,8 @@ def from_pandas(df):
 
     Parameters
     ----------
-    df : pandas.DataFrame
-        The pandas DataFrame to convert.
+    df : pandas.DataFrame, pandas.Series
+        The pandas DataFrame/Series to convert.
 
     Returns
     -------
@@ -87,8 +87,12 @@ def from_pandas(df):
     """
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    from .dataframe import DataFrame
+    from .dataframe import DataFrame, Series
 
+    if isinstance(df, pandas.Series):
+        columns = [MODIN_UNNAMED_SERIES_LABEL] if df.name is None else [df.name]
+        df = pandas.DataFrame(df, columns=columns)
+        return Series(query_compiler=FactoryDispatcher.from_pandas(df))
     return DataFrame(query_compiler=FactoryDispatcher.from_pandas(df))
 
 

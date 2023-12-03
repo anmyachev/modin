@@ -3084,6 +3084,14 @@ class TestPickle:
 
         df_equals(modin_df, recreated_modin_df)
 
+    def test_read_pickle_series(self, tmp_path):
+        # GH#6766
+        unique_filename_modin = get_unique_filename(extension="pkl", data_dir=tmp_path)
+        source_series = pd.Series([1, 2, 3, 4])
+        source_series.to_pickle(unique_filename_modin)
+        pickled_series = pd.read_pickle(unique_filename_modin)
+        df_equals(pickled_series, source_series)
+
 
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestXml:
