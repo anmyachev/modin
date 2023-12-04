@@ -2708,12 +2708,6 @@ class DataFrame(BasePandasDataset):
         """
         return self.round(decimals)
 
-    def __divmod__(self, right):
-        return self._default_to_pandas(pandas.DataFrame.__divmod__, right)
-
-    def __rdivmod__(self, left):
-        return self._default_to_pandas(pandas.DataFrame.__rdivmod__, left)
-
     def __delitem__(self, key):
         """
         Delete item identified by `key` label.
