@@ -14,6 +14,7 @@
 """Module houses builder class for Binary operator."""
 
 from typing import Optional
+import warnings
 
 import numpy as np
 import pandas
@@ -126,7 +127,9 @@ def maybe_compute_dtypes_common_cast(
             df2 = pandas.DataFrame([[1] * len(common_columns)]).astype(
                 {i: dtypes_second[col] for i, col in enumerate(common_columns)}
             )
-            dtypes = func(df1, df2).dtypes.set_axis(common_columns)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=pandas.errors.PerformanceWarning)
+                dtypes = func(df1, df2).dtypes.set_axis(common_columns)
         # it sometimes doesn't work correctly with strings, so falling back to
         # the "common_cast" method in this case
         except TypeError:
